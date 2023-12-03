@@ -2,25 +2,22 @@ import * as React from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { TextField, IconButton, Modal, Button } from "@mui/material";
+import { TextField, IconButton, Button } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
+import Pagination from "@mui/material/Pagination";
+import PaginationItem from "@mui/material/PaginationItem";
 
 const useStyles = makeStyles({
   root: {
     border: "1px solid #ccc",
   },
-  modal: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: 400,
-    bgcolor: "background.paper",
-    boxShadow: 24,
-    p: 4,
+  selectedRow: {
+    backgroundColor: "#f0f0f0",
+    "&:hover": {
+      backgroundColor: "#e0e0e0",
+    },
   },
 });
 
@@ -30,8 +27,7 @@ function DataTable() {
   const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [originalData, setOriginalData] = useState([]);
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState(null);
+  const [selectionModel, setSelectionModel] = useState([]);
 
   useEffect(() => {
     axios
@@ -39,20 +35,63 @@ function DataTable() {
         "https://geektrust.s3-ap-southeast-1.amazonaws.com/adminui-problem/members.json"
       )
       .then((res) => {
-        setData(res.data);
-        setFilteredData(res.data);
-        setOriginalData(res.data);
+        setData(res.data.map((item) => ({ ...item, isEditing: false })));
+        setFilteredData(
+          res.data.map((item) => ({ ...item, isEditing: false }))
+        );
+        setOriginalData(
+          res.data.map((item) => ({ ...item, isEditing: false }))
+        );
       })
       .catch((error) => console.error("Error in fetching data", error));
   }, []);
 
   const columns = [
-    { field: "name", headerName: "Name", width: 150 },
-    { field: "email", headerName: "Email", width: 250 },
-    { field: "role", headerName: "Role", width: 150 },
+    {
+      field: "name",
+      renderHeader: () => <strong style={{ fontSize: 15 }}>{"Name"}</strong>,
+      width: 150,
+      renderCell: (params) =>
+        params.row.isEditing ? (
+          <TextField
+            value={params.row.name}
+            onChange={(e) => handleEditChange(e, params.row.id, "name")}
+          />
+        ) : (
+          params.row.name
+        ),
+    },
+    {
+      field: "email",
+      renderHeader: () => <strong style={{ fontSize: 15 }}>{"Email"}</strong>,
+      width: 250,
+      renderCell: (params) =>
+        params.row.isEditing ? (
+          <TextField
+            value={params.row.email}
+            onChange={(e) => handleEditChange(e, params.row.id, "email")}
+          />
+        ) : (
+          params.row.email
+        ),
+    },
+    {
+      field: "role",
+      renderHeader: () => <strong style={{ fontSize: 15 }}>{"Role"}</strong>,
+      width: 150,
+      renderCell: (params) =>
+        params.row.isEditing ? (
+          <TextField
+            value={params.row.role}
+            onChange={(e) => handleEditChange(e, params.row.id, "role")}
+          />
+        ) : (
+          params.row.role
+        ),
+    },
     {
       field: "actions",
-      headerName: "Actions",
+      renderHeader: () => <strong style={{ fontSize: 15 }}>{"Actions"}</strong>,
       width: 250,
       renderCell: (params) => (
         <>
@@ -83,19 +122,27 @@ function DataTable() {
   };
 
   const handleEdit = (row) => {
-    console.log("Edit clicked for:", row);
-    setSelectedRow(row);
-    setEditModalOpen(true);
+    const updatedData = data.map((d) =>
+      d.id === row.id ? { ...d, isEditing: !d.isEditing } : d
+    );
+
+    setData(updatedData);
+    setFilteredData(updatedData);
+  };
+
+  const handleEditChange = (e, id, field) => {
+    const updatedData = data.map((d) =>
+      d.id === id ? { ...d, [field]: e.target.value } : d
+    );
+
+    setData(updatedData);
+    setFilteredData(updatedData);
   };
 
   const handleDelete = (id) => {
-    console.log("Delete clicked for ID:", id);
-
-    // Check if the row with the specified ID exists in the selected data
     const rowToDelete = data.find((row) => row.id === id);
 
     if (rowToDelete) {
-      // Filter out the deleted row
       const updatedData = data.filter((row) => row.id !== id);
       setData(updatedData);
       setFilteredData(updatedData);
@@ -104,15 +151,14 @@ function DataTable() {
     }
   };
 
-  const handleCloseEditModal = () => {
-    setEditModalOpen(false);
-  };
+  const handleDeleteSelected = () => {
+    const updatedData = data.filter((row) => !selectionModel.includes(row.id));
 
-  const handleSaveEdit = () => {
-    // Implement logic to save edited data
-    // For simplicity, just log the updated data
-    console.log("Saving edited data:", selectedRow);
-    setEditModalOpen(false);
+    setData(updatedData);
+    setFilteredData(updatedData);
+    setSelectionModel([]);
+
+    console.log("Deleted rows:", selectionModel.length);
   };
 
   return (
@@ -124,37 +170,34 @@ function DataTable() {
         onChange={handleSearch}
         style={{ margin: "16px 0 16px 15px" }}
       />
-      <div style={{ height: 600, width: "100%" }} className={classes.root}>
+      <IconButton
+        style={{ margin: "24px 0 0 1200px" }}
+        aria-label="delete"
+        onClick={handleDeleteSelected}
+      >
+        <DeleteIcon />
+      </IconButton>
+
+      <div style={{ height: 631, width: "100%" }} className={classes.root}>
         <DataGrid
           rows={filteredData}
           columns={columns}
           pageSize={5}
+          initialState={{
+            pagination: {
+              paginationModel: { page: 0, pageSize: 10 },
+            },
+          }}
           checkboxSelection
+          selectionModel={selectionModel}
+          onSelectionModelChange={(newSelection) => {
+            setSelectionModel(newSelection.selectionModel);
+          }}
+          rowClassName={(params) =>
+            selectionModel.includes(params.data.id) ? classes.selectedRow : ""
+          }
         />
       </div>
-
-      <Modal
-        open={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <div className={classes.modal}>
-          {/* Implement your edit form or modal content here */}
-          <h2>Edit Row</h2>
-          <p>Edit your row data here.</p>
-          <Button onClick={handleSaveEdit} variant="contained" color="primary">
-            Save
-          </Button>
-          <Button
-            onClick={handleCloseEditModal}
-            variant="contained"
-            color="secondary"
-          >
-            Cancel
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }
