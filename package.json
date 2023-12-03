@@ -16,6 +16,7 @@
     "@mui/material": "^5.14.19",
     "@mui/styles": "^5.14.19",
     "@mui/x-data-grid": "^6.18.2",
+    "@mui/x-data-grid-generator": "^6.18.2",
     "@table-library/react-table-library": "^4.1.7",
     "@tanstack/react-table": "^8.10.7",
     "axios": "^1.6.2",

@@ -5,9 +5,26 @@ import { useEffect, useState } from "react";
 import { TextField, IconButton, Button } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import EditIcon from "@mui/icons-material/Edit";
+import { createTheme, ThemeProvider } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Pagination from "@mui/material/Pagination";
 import PaginationItem from "@mui/material/PaginationItem";
+
+const myTheme = createTheme({
+  components: {
+    //@ts-ignore - this isn't in the TS because DataGird is not exported from `@mui/material`
+    MuiDataGrid: {
+      styleOverrides: {
+        row: {
+          "&.Mui-selected": {
+            backgroundColor: "#C5C5C5",
+            color: "black",
+          },
+        },
+      },
+    },
+  },
+});
 
 const useStyles = makeStyles({
   root: {
@@ -28,6 +45,7 @@ function DataTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [originalData, setOriginalData] = useState([]);
   const [selectionModel, setSelectionModel] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
 
   useEffect(() => {
     axios
@@ -156,9 +174,7 @@ function DataTable() {
 
     setData(updatedData);
     setFilteredData(updatedData);
-    setSelectionModel([]);
-
-    console.log("Deleted rows:", selectionModel.length);
+    setSelectionModel([]); // This line clears the selection
   };
 
   return (
@@ -177,27 +193,28 @@ function DataTable() {
       >
         <DeleteIcon />
       </IconButton>
-
-      <div style={{ height: 631, width: "100%" }} className={classes.root}>
-        <DataGrid
-          rows={filteredData}
-          columns={columns}
-          pageSize={5}
-          initialState={{
-            pagination: {
-              paginationModel: { page: 0, pageSize: 10 },
-            },
-          }}
-          checkboxSelection
-          selectionModel={selectionModel}
-          onSelectionModelChange={(newSelection) => {
-            setSelectionModel(newSelection.selectionModel);
-          }}
-          rowClassName={(params) =>
-            selectionModel.includes(params.data.id) ? classes.selectedRow : ""
-          }
-        />
-      </div>
+      <ThemeProvider theme={myTheme}>
+        <div style={{ height: 631, width: "100%" }} className={classes.root}>
+          <DataGrid
+            rows={filteredData}
+            columns={columns}
+            pageSize={5}
+            initialState={{
+              pagination: {
+                paginationModel: { page: 0, pageSize: 10 },
+              },
+            }}
+            checkboxSelection
+            selectionModel={selectionModel}
+            onSelectionModelChange={(newSelection) => {
+              setSelectionModel(newSelection.selectionModel);
+            }}
+            rowClassName={(params) =>
+              selectionModel.includes(params.data.id) ? classes.selectedRow : ""
+            }
+          />
+        </div>
+      </ThemeProvider>
     </div>
   );
 }
