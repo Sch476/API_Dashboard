@@ -174,7 +174,7 @@ function DataTable() {
 
     setData(updatedData);
     setFilteredData(updatedData);
-    setSelectionModel([]); // This line clears the selection
+    setSelectionModel([]);
   };
 
   return (
